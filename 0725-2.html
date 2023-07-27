@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div class="editor">
+        width:<input id="wid" value="500">height:<input id="hei" value="500">
+        <table>
+            <tr>
+                <td class="ev">
+                    <select name="event" class="event" onchange="updateCommandOptions(this)">
+                        <option value="initialized">select event</option>
+                        <option value="set">set</option>
+                    </select>
+                </td>
+                <td class="cm">
+                    <select name="command" class="command">
+                        <option value="initialized"></option>
+                    </select>
+                </td>
+                <td class="ar">
+                    <select name="arg" class="arg" onfocus="updateArgOptions(this)" onchange="addInput(this)"></select>
+                </td>
+                <td>
+                    <button onclick="addArg(this)">+</button>
+                </td>
+                <td>
+                    <button onclick="deleteRow(this)">delete</button>
+                </td>
+            </tr>
+        </table>
+        <button onclick="addRow(this)">+</button><br>
+        <button onclick="render()">render</button>
+
+    </div>
+
+    <canvas id="myCanvas"></canvas>
+
+</body>
+
+<!-- Three.jsのライブラリをCDNから読み込む -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+    //argSelectsの値をthreeに渡してみる
+    var radian = 150;
+    var tube = 50;
+    var radiansegment = 16;
+    var tubesegment = 100;
+
+
+
+    function addArg(button) {
+        var cell = button.parentNode;
+        var row = button.parentNode.parentNode; // ボタンの親の親要素である行を取得
+        var newArgCell = row.insertCell(cell.cellIndex);
+
+        newArgCell.innerHTML = '<select name="arg" class="arg" onfocus="updateArgOptions(this)" onchange="addInput(this)"></select>';
+    }
+
+    function addRow(button) {
+        var table = document.getElementsByTagName('table')[0];
+        var rowCount = table.rows.length;
+        var row = table.insertRow(rowCount);
+
+        var cell1 = row.insertCell(0);
+        var cell2 = row.insertCell(1);
+        var cell3 = row.insertCell(2);
+        var cell4 = row.insertCell(3);
+        var cell5 = row.insertCell(4);
+
+        cell1.innerHTML = '<select name="event" class="event"  onchange="updateCommandOptions(this)"><option value="initialized">select event</option><option value="set">set</option></select>';
+
+        cell2.innerHTML = '<select name="command" class="command"><option value="initialized"></option></select>';
+
+        cell3.innerHTML = '<select name="arg" class="arg" onfocus="updateArgOptions(this)" onchange="addInput(this)"></select>';
+
+        cell4.innerHTML = '<button onclick="addArg(this)">+</button>';
+
+        cell5.innerHTML = '<button onclick="deleteRow(this)">delete</button>';
+    }
+
+    function updateCommandOptions(select) {
+        var commandSelect = select.parentNode.nextElementSibling.querySelector('select[name="command"]');
+
+        // 選択されたイベントに応じてコマンドのオプションを追加
+        if (select.value === "set") {
+            commandSelect.innerHTML = '<option value="initialized">select object</option>' + '<option value="camera">camera</option>' + '<option value="mesh">mesh</option>' + '<option value="light">light</option>';
+        } else if (select.value === "camera") {
+            commandSelect.innerHTML = '<option value="initialized">default</option>' + '<option value="camera-1">camera-1</option>' + '<option value="camera-2">camera-2</option>';
+        } else if (select.value === "character") {
+            commandSelect.innerHTML = '<option value="initialized">default</option>' + '<option value="character-1">character-1</option>' + '<option value="character-2">character-2</option>';
+        }
+    }
+
+    function updateArgOptions(select) {
+        var commandSelect = select.parentNode.parentNode.querySelector('select[name="command"]');
+
+        if (commandSelect.value === "camera") {
+            select.innerHTML = '<option value="initialized">select type</option>' + '<option value="set-1-1">camera-1</option>' + '<option value="camera-2">camera-2</option>'
+        } else if (commandSelect.value === "mesh") {
+            select.innerHTML = '<option value="initialized">select type</option>' + '<option value="rad">円の半径</option>' + '<option value="tu">断面円の半径</option>' + '<option value="radSeg">断面円の分割数</option>' + '<option value="tuSeg">芯の円の分割数</option>'
+        } else if (commandSelect.value === "light") {
+            select.innerHTML = '<option value="initialized">select type</option>' + '<option value="z-position">奥行の位置</option>'
+        }
+    }
+
+    //行を削除するボタン 現状argTypeを変更するたびにinputが追加されるのでミスったときのために
+    function deleteRow(button) {
+        var targetRow = button.parentNode.parentNode;
+        console.log(targetRow);
+        targetRow.parentNode.removeChild(targetRow);
+    }
+
+
+
+    //選択されたargTypeと追加するInputを合わせて追加
+    function addInput(select) {
+
+        var argType = select.value;
+        var newInput;
+
+        switch (argType) {
+            case 'rad':
+                newInput = ' <input id="rad" onchange="updateArgument(this)">';
+                select.insertAdjacentHTML('afterend', newInput);
+                break;
+            case 'tu':
+                newInput = ' <input id="tu" onchange="updateArgument(this)">';
+                select.insertAdjacentHTML('afterend', newInput);
+                break;
+            case 'radSeg':
+                newInput = ' <input id="radSeg" onchange="updateArgument(this)">';
+                select.insertAdjacentHTML('afterend', newInput);
+                break;
+            case 'tuSeg':
+                newInput = ' <input id="tuSeg" onchange="updateArgument(this)">';
+                select.insertAdjacentHTML('afterend', newInput);
+                break;
+        }
+    }
+
+    function updateArgument(input) {
+        switch (input.id) {
+            case 'rad':
+            radianInput = input.value;
+            radian = parseFloat(radianInput);
+            break;
+            case 'tu':
+            tubeInput = input.value;
+            tube = parseFloat(tubeInput);
+            break;
+            case 'radSeg':
+            radianSegInput = input.value;
+            radSeg = parseFloat(radianSegInput);
+            break;
+            case 'tuSeg':
+            tubeSegInput = input.value;
+            tuSeg = parseFloat(tubeSegInput);
+            break;
+        }
+    }
+
+    //commandセレクトを選択してから関数を呼ぶためのリスナー
+
+    var inputWidth = document.getElementById('wid');
+    var inputHeight = document.getElementById('hei');
+
+    // ドキュメント内のすべてのinput要素に対してイベントリスナーを登録
+    var inputElements = document.querySelectorAll('input');
+
+    inputElements.forEach(inputElement => {
+        inputElement.addEventListener('input', function () {
+            render();
+        });
+    });
+
+    render();
+
+    function render() {
+
+        // サイズを指定
+        var width = inputHeight.value;
+        var height = inputHeight.value;
+
+        //canvasの宣言
+        const canvas = document.getElementById('myCanvas');
+
+        // レンダラーを作成
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector("#myCanvas"),
+        });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(width, height);
+
+        // シーンを作成
+        const scene = new THREE.Scene();
+
+        // カメラを作成
+        const camera = new THREE.PerspectiveCamera(100, width / height);
+        camera.position.set(0, 0, +400);
+
+        //ライトを作成
+        const light = new THREE.PointLight(0x00ffff);
+        light.position.set(300, 300, 300);
+        scene.add(light);
+
+        // 箱を作成
+        const geometry = new THREE.TorusGeometry(radian, tube, radiansegment, tubesegment); //150, 50, 16, 100
+        const material = new THREE.MeshLambertMaterial({ color: 0xffffff });
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        //レンダリング
+        renderer.render(scene, camera);
+
+        //マウスカーソルの座標取得
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            const lightX = mouseX - (width / 2);
+            const lightY = -mouseY + (height / 2);
+
+            light.position.set(lightX, lightY, 300);
+
+        });
+
+        function animate() {
+            mesh.rotation.y += 0.01;
+            mesh.rotation.x += 0.01;
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    }
+
+</script>
+
+<style type="text/css">
+    input {
+        width: 50px;
+    }
+
+    .editor {
+        float: left
+    }
+
+    #myCanvas {
+        float: right;
+    }
+
+    .event {
+        background-color: rgb(125, 166, 255);
+    }
+
+    .command {
+        background-color: rgb(173, 210, 141);
+    }
+
+    .arg {
+        background-color: rgb(228, 159, 255);
+    }
+
+    input {
+        background-color: rgb(255, 125, 168);
+    }
+</style>
+
+</html>
